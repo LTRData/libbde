@@ -32,6 +32,7 @@
 
 #if defined( HAVE_STDLIB_H ) || defined( WINAPI )
 #include <stdlib.h>
+#include <io.h>
 #endif
 
 #include "bdetools_getopt.h"

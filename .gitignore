@@ -177,3 +177,16 @@ stamp-h[1-9]
 /libfvalue
 /libhmac
 /libuna
+
+*.tlog
+*.pdb
+.vs
+Release
+Debug
+Backup
+*.ilk
+*.user
+
+**/VSDebug
+**/Debug
+**/Release
