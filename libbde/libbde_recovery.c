@@ -22,8 +22,10 @@
 #include <common.h>
 #include <byte_stream.h>
 #include <memory.h>
+#include <narrow_string.h>
 #include <types.h>
 
+#include "libbde_libcaes.h"
 #include "libbde_libcerror.h"
 #include "libbde_libcnotify.h"
 #include "libbde_libfvalue.h"
@@ -460,3 +462,271 @@ on_error:
 	return( -1 );
 }
 
+/* Recovers the recovery password from metadata using the plain VMK bytes
+ * Returns 1 if successful, 0 if the recovery password VMK entry is not present or -1 on error
+ */
+int libbde_recovery_password_from_vmk(
+     libbde_metadata_t *metadata,
+     const uint8_t *vmk_bytes,
+     size_t vmk_bytes_size,
+     uint8_t *recovery_password,
+     size_t recovery_password_size,
+     libcerror_error_t **error )
+{
+	uint8_t *unencrypted_data      = NULL;
+	libcaes_context_t *aes_context = NULL;
+	static char *function          = "libbde_recovery_password_from_vmk";
+	size_t unencrypted_data_size   = 0;
+	uint16_t block_value           = 0;
+	uint32_t formatted_block       = 0;
+	int block_index                = 0;
+	int print_count                = 0;
+
+	if( metadata == NULL )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_ARGUMENTS,
+		 LIBCERROR_ARGUMENT_ERROR_INVALID_VALUE,
+		 "%s: invalid metadata.",
+		 function );
+
+		return( -1 );
+	}
+	if( metadata->recovery_password_volume_master_key == NULL )
+	{
+		return( 0 );
+	}
+	if( metadata->recovery_password_volume_master_key->aes_ccm_encrypted_key == NULL )
+	{
+		return( 0 );
+	}
+	if( vmk_bytes == NULL )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_ARGUMENTS,
+		 LIBCERROR_ARGUMENT_ERROR_INVALID_VALUE,
+		 "%s: invalid VMK bytes.",
+		 function );
+
+		return( -1 );
+	}
+	if( vmk_bytes_size < 32 )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_ARGUMENTS,
+		 LIBCERROR_ARGUMENT_ERROR_VALUE_TOO_SMALL,
+		 "%s: invalid VMK bytes value too small.",
+		 function );
+
+		return( -1 );
+	}
+	if( recovery_password == NULL )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_ARGUMENTS,
+		 LIBCERROR_ARGUMENT_ERROR_INVALID_VALUE,
+		 "%s: invalid recovery password.",
+		 function );
+
+		return( -1 );
+	}
+	if( recovery_password_size < 56 )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_ARGUMENTS,
+		 LIBCERROR_ARGUMENT_ERROR_VALUE_TOO_SMALL,
+		 "%s: invalid recovery password value too small.",
+		 function );
+
+		return( -1 );
+	}
+	unencrypted_data_size = metadata->recovery_password_volume_master_key->aes_ccm_encrypted_key->data_size;
+
+	if( ( unencrypted_data_size < 28 )
+	 || ( unencrypted_data_size > MEMORY_MAXIMUM_ALLOCATION_SIZE ) )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_RUNTIME,
+		 LIBCERROR_RUNTIME_ERROR_VALUE_OUT_OF_BOUNDS,
+		 "%s: invalid recovery password VMK - AES-CCM encrypted key data size value out of bounds.",
+		 function );
+
+		return( -1 );
+	}
+	unencrypted_data = (uint8_t *) memory_allocate(
+	                                unencrypted_data_size );
+
+	if( unencrypted_data == NULL )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_MEMORY,
+		 LIBCERROR_MEMORY_ERROR_INSUFFICIENT,
+		 "%s: unable to create unencrypted data.",
+		 function );
+
+		return( -1 );
+	}
+	if( memory_set(
+	     unencrypted_data,
+	     0,
+	     unencrypted_data_size ) == NULL )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_MEMORY,
+		 LIBCERROR_MEMORY_ERROR_SET_FAILED,
+		 "%s: unable to clear unencrypted data.",
+		 function );
+
+		goto on_error;
+	}
+	if( libcaes_context_initialize(
+	     &aes_context,
+	     error ) != 1 )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_RUNTIME,
+		 LIBCERROR_RUNTIME_ERROR_INITIALIZE_FAILED,
+		 "%s: unable initialize AES context.",
+		 function );
+
+		goto on_error;
+	}
+	if( libcaes_context_set_key(
+	     aes_context,
+	     LIBCAES_CRYPT_MODE_ENCRYPT,
+	     vmk_bytes,
+	     256,
+	     error ) != 1 )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_RUNTIME,
+		 LIBCERROR_RUNTIME_ERROR_SET_FAILED,
+		 "%s: unable to set encryption key in AES context.",
+		 function );
+
+		goto on_error;
+	}
+	if( libcaes_crypt_ccm(
+	     aes_context,
+	     LIBCAES_CRYPT_MODE_DECRYPT,
+	     metadata->recovery_password_volume_master_key->aes_ccm_encrypted_key->nonce,
+	     12,
+	     metadata->recovery_password_volume_master_key->aes_ccm_encrypted_key->data,
+	     metadata->recovery_password_volume_master_key->aes_ccm_encrypted_key->data_size,
+	     unencrypted_data,
+	     unencrypted_data_size,
+	     error ) != 1 )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_ENCRYPTION,
+		 LIBCERROR_ENCRYPTION_ERROR_ENCRYPT_FAILED,
+		 "%s: unable to decrypt data.",
+		 function );
+
+		goto on_error;
+	}
+	if( libcaes_context_free(
+	     &aes_context,
+	     error ) != 1 )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_RUNTIME,
+		 LIBCERROR_RUNTIME_ERROR_FINALIZE_FAILED,
+		 "%s: unable free context.",
+		 function );
+
+		goto on_error;
+	}
+	for( block_index = 0;
+	     block_index < 8;
+	     block_index++ )
+	{
+		byte_stream_copy_to_uint16_little_endian(
+		 &( unencrypted_data[ 0x18 + ( block_index * 2 ) ] ),
+		 block_value );
+
+		formatted_block = (uint32_t) block_value * 11;
+
+		if( block_index < 7 )
+		{
+			/* Use size 8 so sprintf_s (MSVC) has room for the 7 visible
+			 * characters ("XXXXXX-") plus its required null terminator.
+			 * The null will be overwritten by the next block; the final
+			 * null terminator is set explicitly below.
+			 */
+			print_count = narrow_string_snprintf(
+			              (char *) &( recovery_password[ block_index * 7 ] ),
+			              8,
+			              "%06" PRIu32 "-",
+			              formatted_block );
+		}
+		else
+		{
+			/* Last block: "XXXXXX" (6 chars) + null = 7 bytes, fits exactly. */
+			print_count = narrow_string_snprintf(
+			              (char *) &( recovery_password[ block_index * 7 ] ),
+			              7,
+			              "%06" PRIu32,
+			              formatted_block );
+		}
+		/* For blocks 0-6 the format writes 7 characters ("XXXXXX-");
+		 * for block 7 it writes 6 characters ("XXXXXX").
+		 * Treat print_count > 7 as overflow (never expected).
+		 */
+		if( ( print_count < 0 )
+		 || ( (size_t) print_count > 7 ) )
+		{
+			libcerror_error_set(
+			 error,
+			 LIBCERROR_ERROR_DOMAIN_RUNTIME,
+			 LIBCERROR_RUNTIME_ERROR_SET_FAILED,
+			 "%s: unable to set recovery password block: %d.",
+			 function,
+			 block_index );
+
+			goto on_error;
+		}
+	}
+	recovery_password[ 55 ] = 0;
+
+	memory_set(
+	 unencrypted_data,
+	 0,
+	 unencrypted_data_size );
+
+	memory_free(
+	 unencrypted_data );
+
+	return( 1 );
+
+on_error:
+	if( aes_context != NULL )
+	{
+		libcaes_context_free(
+		 &aes_context,
+		 NULL );
+	}
+	if( unencrypted_data != NULL )
+	{
+		memory_set(
+		 unencrypted_data,
+		 0,
+		 unencrypted_data_size );
+
+		memory_free(
+		 unencrypted_data );
+	}
+	return( -1 );
+}
