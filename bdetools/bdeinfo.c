@@ -35,6 +35,10 @@
 #include <io.h>
 #endif
 
+#if defined( WINAPI )
+#include <io.h>
+#endif
+
 #include "bdetools_getopt.h"
 #include "bdetools_libbde.h"
 #include "bdetools_libcerror.h"
