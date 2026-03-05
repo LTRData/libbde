@@ -498,7 +498,8 @@ static int rp_try_decrypt(
 	uint16_t binary_rp_word;
 	uint32_t segment_value;
 	int result;
-	int _di;
+	size_t prefix;
+	size_t total;
 
 	if( ct_size > 60 || ct_size < 16 )
 	{
@@ -509,12 +510,12 @@ static int rp_try_decrypt(
 	if( memory_copy( nonce, sub_data, 12 ) == NULL ) return( 0 );
 
 	/* ciphertext starts at sub_data+12 */
-	/* pass 0: no dummy prefix — real data at counter=0 */
-	/* pass 1: 16-byte dummy prefix — real data at counter=1 (A1) */
+	/* pass 0: no dummy prefix â€” real data at counter=0 */
+	/* pass 1: 16-byte dummy prefix â€” real data at counter=1 (A1) */
 	for( pass = 0; pass <= 1; pass++ )
 	{
-		size_t prefix      = (size_t) pass * 16;
-		size_t total       = prefix + ct_size;
+		prefix = (size_t) pass * 16;
+		total  = prefix + ct_size;
 
 		if( total > 76 ) continue;
 

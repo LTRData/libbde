@@ -3287,6 +3287,17 @@ int libbde_volume_get_utf8_recovered_recovery_password(
 
 		return( -1 );
 	}
+	if( utf8_string_size > (size_t) SSIZE_MAX )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_ARGUMENTS,
+		 LIBCERROR_ARGUMENT_ERROR_VALUE_EXCEEDS_MAXIMUM,
+		 "%s: invalid UTF-8 string size value exceeds maximum.",
+		 function );
+
+		return( -1 );
+	}
 	internal_volume = (libbde_internal_volume_t *) volume;
 
 #if defined( HAVE_LIBBDE_MULTI_THREAD_SUPPORT )
