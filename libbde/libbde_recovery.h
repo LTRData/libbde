@@ -28,6 +28,7 @@
 #include "libbde_libcerror.h"
 #include "libbde_libhmac.h"
 #include "libbde_metadata.h"
+#include "libbde_password_keep.h"
 
 #if defined( __cplusplus )
 extern "C" {
@@ -49,8 +50,8 @@ int libbde_utf16_recovery_password_calculate_hash(
 
 int libbde_recovery_password_from_vmk(
      libbde_metadata_t *metadata,
-     const uint8_t *vmk_bytes,
-     size_t vmk_bytes_size,
+     libbde_password_keep_t *password_keep,
+     const uint8_t *volume_master_key,
      uint8_t *recovery_password,
      size_t recovery_password_size,
      libcerror_error_t **error );
