@@ -1809,8 +1809,8 @@ int libbde_internal_volume_open_read_keys_from_metadata(
 
 			if( libbde_recovery_password_from_vmk(
 			     metadata,
-			     vmk_bytes_out,
-			     32,
+			     internal_volume->password_keep,
+			     volume_master_key,
 			     internal_volume->recovered_recovery_password,
 			     56,
 			     error ) == -1 )
@@ -3283,6 +3283,17 @@ int libbde_volume_get_utf8_recovered_recovery_password(
 		 LIBCERROR_ERROR_DOMAIN_ARGUMENTS,
 		 LIBCERROR_ARGUMENT_ERROR_VALUE_TOO_SMALL,
 		 "%s: UTF-8 string too small.",
+		 function );
+
+		return( -1 );
+	}
+	if( utf8_string_size > (size_t) SSIZE_MAX )
+	{
+		libcerror_error_set(
+		 error,
+		 LIBCERROR_ERROR_DOMAIN_ARGUMENTS,
+		 LIBCERROR_ARGUMENT_ERROR_VALUE_EXCEEDS_MAXIMUM,
+		 "%s: invalid UTF-8 string size value exceeds maximum.",
 		 function );
 
 		return( -1 );
