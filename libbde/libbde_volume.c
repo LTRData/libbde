@@ -1809,7 +1809,6 @@ int libbde_internal_volume_open_read_keys_from_metadata(
 
 			if( libbde_recovery_password_from_vmk(
 			     metadata,
-			     internal_volume->password_keep,
 			     volume_master_key,
 			     internal_volume->recovered_recovery_password,
 			     56,

@@ -480,7 +480,6 @@ static int rp_try_decrypt(
      libcaes_context_t *aes_context,
      const uint8_t *sub_data,
      size_t ct_size,
-     const char *label,
      uint8_t *found_rp_out,
      libcerror_error_t **error )
 {
@@ -491,7 +490,6 @@ static int rp_try_decrypt(
 	int pass;
 	int segment_index;
 	int is_valid;
-	size_t try_sizes[ 2 ];
 	size_t rp_offsets[ 4 ];
 	size_t n_offsets;
 	size_t k;
@@ -634,7 +632,6 @@ static int rp_try_decrypt(
  */
 int libbde_recovery_password_from_vmk(
      libbde_metadata_t *metadata,
-     libbde_password_keep_t *password_keep,
      const uint8_t *volume_master_key,
      uint8_t *recovery_password,
      size_t recovery_password_size,
@@ -743,12 +740,12 @@ int libbde_recovery_password_from_vmk(
 
 	/* --- Try sub-entry 1 (bytes 0..63: header 0..7, nonce 8..19, ct 20..63, ct_size=44) --- */
 	/* Pass sub_data pointing at byte 8 (nonce start); ct_size = 44 */
-	found = rp_try_decrypt( aes_context, &( sk->data[ 8 ] ), 44, "E1", binary_rp, error );
+	found = rp_try_decrypt( aes_context, &( sk->data[ 8 ] ), 44, binary_rp, error );
 
 	/* --- Try sub-entry 2 (bytes 64..143: header 64..71, nonce 72..83, ct 84..143, ct_size=60) --- */
 	if( found == 0 && sk->data_size >= 144 )
 	{
-		found = rp_try_decrypt( aes_context, &( sk->data[ 72 ] ), 60, "E2", binary_rp, error );
+		found = rp_try_decrypt( aes_context, &( sk->data[ 72 ] ), 60, binary_rp, error );
 	}
 
 	if( libcaes_context_free( &aes_context, error ) != 1 )

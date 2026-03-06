@@ -48,6 +48,13 @@ int libbde_volume_open_file_io_handle(
      int access_flags,
      libbde_error_t **error );
 
+extern \
+int libbde_volume_get_utf8_recovered_recovery_password(
+	libbde_volume_t* volume,
+	uint8_t* utf8_string,
+	size_t utf8_string_size,
+	libcerror_error_t** error);
+
 #endif /* !defined( LIBBDE_HAVE_BFIO ) */
 
 #define INFO_HANDLE_NOTIFY_STREAM		stdout

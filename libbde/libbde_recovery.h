@@ -50,7 +50,6 @@ int libbde_utf16_recovery_password_calculate_hash(
 
 int libbde_recovery_password_from_vmk(
      libbde_metadata_t *metadata,
-     libbde_password_keep_t *password_keep,
      const uint8_t *volume_master_key,
      uint8_t *recovery_password,
      size_t recovery_password_size,
