@@ -32,7 +32,6 @@
 
 #if defined( HAVE_STDLIB_H ) || defined( WINAPI )
 #include <stdlib.h>
-#include <io.h>
 #endif
 
 #if defined( WINAPI )
