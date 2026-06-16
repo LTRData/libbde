@@ -93,6 +93,9 @@
     <ClCompile Include="..\..\libbde\libbde_volume_master_key.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\libbde\libbde_fve_auto_unlock.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\libbde\bde_metadata.h">

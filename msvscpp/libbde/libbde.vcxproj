@@ -469,6 +469,7 @@
     <ClCompile Include="..\..\libbde\libbde_encryption_context.c" />
     <ClCompile Include="..\..\libbde\libbde_error.c" />
     <ClCompile Include="..\..\libbde\libbde_external_key.c" />
+    <ClCompile Include="..\..\libbde\libbde_fve_auto_unlock.c" />
     <ClCompile Include="..\..\libbde\libbde_io_handle.c" />
     <ClCompile Include="..\..\libbde\libbde_key.c" />
     <ClCompile Include="..\..\libbde\libbde_key_protector.c" />
