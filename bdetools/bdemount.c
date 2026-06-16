@@ -1,7 +1,7 @@
 /*
  * Mounts a BitLocker Drive Encrypted (BDE) volume.
  *
- * Copyright (C) 2011-2025, Joachim Metz <joachim.metz@gmail.com>
+ * Copyright (C) 2011-2026, Joachim Metz <joachim.metz@gmail.com>
  *
  * Refer to AUTHORS for acknowledgements.
  *
@@ -26,6 +26,10 @@
 #include <types.h>
 
 #include <stdio.h>
+
+#if defined( HAVE_FCNTL_H ) || defined( WINAPI )
+#include <fcntl.h>
+#endif
 
 #if defined( HAVE_IO_H ) || defined( WINAPI )
 #include <io.h>
@@ -66,16 +70,29 @@ void usage_fprint(
 	}
 	fprintf( stream, "Use bdemount to mount a BitLocker Drive Encrypted (BDE) volume\n\n" );
 
-	fprintf( stream, "Usage: bdemount [ -k keys ] [ -o offset ] [ -p password ]\n"
-	                 "                [ -r recovery_password ] [ -s startup_key_path ]\n"
-	                 "                [ -X extended_options ] [ -huvV ] volume mount_point\n\n" );
-
+#if defined( HAVE_LIBFUSE ) || defined( HAVE_LIBFUSE3 ) || defined( HAVE_LIBOSXFUSE )
+	fprintf( stream, "Usage: bdemount [ -B blob ] [ -k keys ] [ -K key ] [ -o offset ]\n"
+	                 "                [ -p password ] [ -r recovery_password ]\n"
+	                 "                [ -s startup_key_path ] [ -X extended_options ]\n"
+	                 "                [ -huvV ] volume mount_point\n\n" );
+#else
+	fprintf( stream, "Usage: bdemount [ -B blob ] [ -k keys ] [ -K key ] [ -o offset ]\n"
+	                 "                [ -p password ] [ -r recovery_password ]\n"
+	                 "                [ -s startup_key_path ] [ -huvV ] volume mount_point\n\n" );
+#endif
 	fprintf( stream, "\tvolume:      a BitLocker Drive Encrypted (BDE) volume\n\n" );
 	fprintf( stream, "\tmount_point: the directory to serve as mount point\n\n" );
 
+	fprintf( stream, "\t-B:          specify the file containing the FVEAutoUnlock blob (the binary\n"
+	                 "\t             'Data' value from the registry key HKLM\\SYSTEM\\CurrentControlSet\n"
+	                 "\t             \\Control\\FVEAutoUnlock\\{GUID}). Used together with -K to unlock\n"
+	                 "\t             a secondary (auto-unlocked) volume\n" );
 	fprintf( stream, "\t-h:          shows this help\n" );
 	fprintf( stream, "\t-k:          specify the full volume encryption key and tweak key formatted in\n"
 	                 "\t             base16 and separated by a : character e.g. FVEK:TWEAK\n" );
+	fprintf( stream, "\t-K:          specify the auto-unlock key of the operating system volume formatted\n"
+	                 "\t             in base16 (64 hexadecimal characters). Used together with -B to\n"
+	                 "\t             unlock a secondary (auto-unlocked) volume\n" );
 	fprintf( stream, "\t-o:          specify the volume offset in bytes\n" );
 	fprintf( stream, "\t-p:          specify the password/passphrase\n" );
 	fprintf( stream, "\t-r:          specify the recovery password/passphrase\n" );
@@ -85,7 +102,10 @@ void usage_fprint(
 	fprintf( stream, "\t-v:          verbose output to stderr, while bdemount will remain running in the\n"
 	                 "\t             foreground\n" );
 	fprintf( stream, "\t-V:          print version\n" );
+
+#if defined( HAVE_LIBFUSE ) || defined( HAVE_LIBFUSE3 ) || defined( HAVE_LIBOSXFUSE )
 	fprintf( stream, "\t-X:          extended options to pass to sub system\n" );
+#endif
 }
 
 /* Signal handler for bdemount
@@ -141,24 +161,31 @@ int main( int argc, char * const argv[] )
 #endif
 {
 	libbde_error_t *error                        = NULL;
-	system_character_t *mount_point              = NULL;
-	system_character_t *option_extended_options  = NULL;
+	system_character_t *option_auto_unlock_blob  = NULL;
+	system_character_t *option_auto_unlock_key   = NULL;
 	system_character_t *option_keys              = NULL;
 	system_character_t *option_offset            = NULL;
 	system_character_t *option_password          = NULL;
 	system_character_t *option_recovery_password = NULL;
 	system_character_t *option_startup_key_path  = NULL;
+	system_character_t *options                  = NULL;
 	const system_character_t *path_prefix        = NULL;
 	system_character_t *source                   = NULL;
 	char *program                                = "bdemount";
 	system_integer_t option                      = 0;
 	size_t path_prefix_size                      = 0;
-	int result                                   = 0;
 	int unattended_mode                          = 0;
 	int verbose                                  = 0;
 
+#if defined( HAVE_LIBFUSE ) || defined( HAVE_LIBFUSE3 ) || defined( HAVE_LIBOSXFUSE ) || defined( HAVE_LIBDOKAN )
+	system_character_t *mount_point              = NULL;
+	int result                                   = 0;
+#endif
+
 #if defined( HAVE_LIBFUSE ) || defined( HAVE_LIBFUSE3 ) || defined( HAVE_LIBOSXFUSE )
 	struct fuse_operations bdemount_fuse_operations;
+
+	system_character_t *option_extended_options  = NULL;
 
 #if defined( HAVE_LIBFUSE3 )
 	/* Need to set this to 1 even if there no arguments, otherwise this causes
@@ -175,6 +202,11 @@ int main( int argc, char * const argv[] )
 #elif defined( HAVE_LIBDOKAN )
 	DOKAN_OPERATIONS bdemount_dokan_operations;
 	DOKAN_OPTIONS bdemount_dokan_options;
+#endif
+
+#if defined( __MINGW32__ ) && defined( HAVE_MINGW_BINMODE )
+	_setmode( _fileno( stdout ), _O_BINARY );
+	_setmode( _fileno( stderr ), _O_BINARY );
 #endif
 
 	libcnotify_stream_set(
@@ -207,10 +239,15 @@ int main( int argc, char * const argv[] )
 	 stdout,
 	 program );
 
+#if defined( HAVE_LIBFUSE ) || defined( HAVE_LIBFUSE3 ) || defined( HAVE_LIBOSXFUSE )
+	options = _SYSTEM_STRING( "B:hk:K:o:p:r:s:uvVX:" );
+#else
+	options = _SYSTEM_STRING( "B:hk:K:o:p:r:s:uvV" );
+#endif
 	while( ( option = bdetools_getopt(
 	                   argc,
 	                   argv,
-	                   _SYSTEM_STRING( "hk:o:p:r:s:uvVX:" ) ) ) != (system_integer_t) -1 )
+	                   options ) ) != (system_integer_t) -1 )
 	{
 		switch( option )
 		{
@@ -226,6 +263,11 @@ int main( int argc, char * const argv[] )
 
 				return( EXIT_FAILURE );
 
+			case (system_integer_t) 'B':
+				option_auto_unlock_blob = optarg;
+
+				break;
+
 			case (system_integer_t) 'h':
 				usage_fprint(
 				 stdout );
@@ -234,6 +276,11 @@ int main( int argc, char * const argv[] )
 
 			case (system_integer_t) 'k':
 				option_keys = optarg;
+
+				break;
+
+			case (system_integer_t) 'K':
+				option_auto_unlock_key = optarg;
 
 				break;
 
@@ -273,10 +320,12 @@ int main( int argc, char * const argv[] )
 
 				return( EXIT_SUCCESS );
 
+#if defined( HAVE_LIBFUSE ) || defined( HAVE_LIBFUSE3 ) || defined( HAVE_LIBOSXFUSE )
 			case (system_integer_t) 'X':
 				option_extended_options = optarg;
 
 				break;
+#endif
 		}
 	}
 	if( optind == argc )
@@ -303,8 +352,9 @@ int main( int argc, char * const argv[] )
 
 		return( EXIT_FAILURE );
 	}
+#if defined( HAVE_LIBFUSE ) || defined( HAVE_LIBFUSE3 ) || defined( HAVE_LIBOSXFUSE ) || defined( HAVE_LIBDOKAN )
 	mount_point = argv[ optind ];
-
+#endif
 	libcnotify_verbose_set(
 	 verbose );
 	libbde_notify_set_stream(
@@ -390,6 +440,34 @@ int main( int argc, char * const argv[] )
 			fprintf(
 			 stderr,
 			 "Unable to set startup key.\n" );
+
+			goto on_error;
+		}
+	}
+	if( option_auto_unlock_key != NULL )
+	{
+		if( mount_handle_set_auto_unlock_key(
+		     bdemount_mount_handle,
+		     option_auto_unlock_key,
+		     &error ) != 1 )
+		{
+			fprintf(
+			 stderr,
+			 "Unable to set auto-unlock key.\n" );
+
+			goto on_error;
+		}
+	}
+	if( option_auto_unlock_blob != NULL )
+	{
+		if( mount_handle_set_auto_unlock_blob(
+		     bdemount_mount_handle,
+		     option_auto_unlock_blob,
+		     &error ) != 1 )
+		{
+			fprintf(
+			 stderr,
+			 "Unable to set FVEAutoUnlock blob.\n" );
 
 			goto on_error;
 		}
@@ -542,7 +620,7 @@ int main( int argc, char * const argv[] )
 	                        &bdemount_fuse_operations,
 	                        sizeof( struct fuse_operations ),
 	                        bdemount_mount_handle );
-	
+
 	if( bdemount_fuse_handle == NULL )
 	{
 		fprintf(

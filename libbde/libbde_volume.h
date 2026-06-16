@@ -1,7 +1,7 @@
 /*
  * Volume functions
  *
- * Copyright (C) 2011-2025, Joachim Metz <joachim.metz@gmail.com>
+ * Copyright (C) 2011-2026, Joachim Metz <joachim.metz@gmail.com>
  *
  * Refer to AUTHORS for acknowledgements.
  *
@@ -264,6 +264,13 @@ int libbde_volume_get_encryption_method(
      libcerror_error_t **error );
 
 LIBBDE_EXTERN \
+int libbde_volume_get_auto_unlock_key(
+     libbde_volume_t *volume,
+     uint8_t *key_data,
+     size_t key_data_size,
+     libcerror_error_t **error );
+
+LIBBDE_EXTERN \
 int libbde_volume_get_volume_identifier(
      libbde_volume_t *volume,
      uint8_t *guid_data,
@@ -384,6 +391,23 @@ LIBBDE_EXTERN \
 int libbde_volume_read_startup_key_file_io_handle(
      libbde_volume_t *volume,
      libbfio_handle_t *file_io_handle,
+     libcerror_error_t **error );
+
+LIBBDE_EXTERN \
+int libbde_volume_read_auto_unlock_blob(
+     libbde_volume_t *volume,
+     const uint8_t *auto_unlock_key,
+     size_t auto_unlock_key_size,
+     const uint8_t *blob_data,
+     size_t blob_data_size,
+     libcerror_error_t **error );
+
+LIBBDE_EXTERN \
+int libbde_volume_read_auto_unlock_blob_file_io_handle(
+     libbde_volume_t *volume,
+     const uint8_t *auto_unlock_key,
+     size_t auto_unlock_key_size,
+     libbfio_handle_t *blob_file_io_handle,
      libcerror_error_t **error );
 
 #if defined( __cplusplus )

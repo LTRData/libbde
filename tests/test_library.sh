@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests library functions and types.
 #
-# Version: 20240413
+# Version: 20260531
 
 EXIT_SUCCESS=0;
 EXIT_FAILURE=1;
@@ -78,21 +78,27 @@ run_test_with_input()
 
 		local TEST_SET_DIRECTORY=$(get_test_set_directory "${TEST_PROFILE_DIRECTORY}" "${TEST_SET_INPUT_DIRECTORY}");
 
+		local INPUT_FILES=()
+
 		if test -f "${TEST_SET_DIRECTORY}/files";
 		then
-			IFS="" read -a INPUT_FILES <<< $(cat ${TEST_SET_DIRECTORY}/files | sed "s?^?${TEST_SET_INPUT_DIRECTORY}/?");
+			while IFS= read -r FILENAME;
+			do
+				if test -n "${FILENAME}}";
+				then
+					INPUT_FILES+=("${TEST_SET_INPUT_DIRECTORY}/${FILENAME}")
+				fi
+			done < "${TEST_SET_DIRECTORY}/files"
 		else
-			IFS="" read -a INPUT_FILES <<< $(ls -1d ${TEST_SET_INPUT_DIRECTORY}/${INPUT_GLOB});
+			for FILENAME in ${TEST_SET_INPUT_DIRECTORY}/${INPUT_GLOB};
+			do
+				INPUT_FILES+=("${FILENAME}")
+			done
 		fi
 		for INPUT_FILE in "${INPUT_FILES[@]}";
 		do
 			OPTION_INPUT_FILE="${INPUT_FILE}";
 
-			if test "${OSTYPE}" = "msys";
-			then
-				# A test executable built with MinGW expects a Windows path.
-				INPUT_FILE=`echo ${INPUT_FILE} | sed 's?/?\\\\?g'`;
-			fi
 			local TESTED_WITH_OPTIONS=0;
 
 			for OPTION_SET in ${OPTION_SETS[@]};

@@ -1,7 +1,7 @@
 /*
  * Debug functions
  *
- * Copyright (C) 2011-2025, Joachim Metz <joachim.metz@gmail.com>
+ * Copyright (C) 2011-2026, Joachim Metz <joachim.metz@gmail.com>
  *
  * Refer to AUTHORS for acknowledgements.
  *
@@ -88,6 +88,9 @@ const char *libbde_debug_print_entry_type(
 
 		case LIBBDE_ENTRY_TYPE_DESCRIPTION:
 			return( "Description" );
+
+		case LIBBDE_ENTRY_TYPE_AUTO_UNLOCK_KEY:
+			return( "Auto-unlock key" );
 
 		case LIBBDE_ENTRY_TYPE_VOLUME_HEADER_BLOCK:
 			return( "Volume header block" );

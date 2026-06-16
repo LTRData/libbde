@@ -2,7 +2,7 @@ AC_PREREQ([2.71])
 
 AC_INIT(
   [libbde],
-  [20251219],
+  [20260605],
   [joachim.metz@gmail.com])
 
 AC_CONFIG_SRCDIR(
@@ -21,7 +21,6 @@ LT_INIT([win32-dll])
 
 dnl Checks for programs
 AC_PROG_CC
-AC_PROG_GCC_TRADITIONAL
 AC_PROG_CXX
 AC_PROG_MAKE_SET
 AC_PROG_INSTALL
@@ -45,6 +44,15 @@ AC_SYS_LARGEFILE
 
 dnl Check if shared library support should be disabled
 AX_COMMON_CHECK_DISABLE_SHARED_LIBS
+
+dnl Check if asan support should be enabled
+AX_TESTS_CHECK_ENABLE_ASAN
+
+dnl Check if ubsan support should be enabled
+AX_TESTS_CHECK_ENABLE_UBSAN
+
+dnl Check if code coverage support should be enabled
+AX_TESTS_CHECK_ENABLE_CODE_COVERAGE
 
 dnl Check if tools should be build as static executables
 AX_COMMON_CHECK_ENABLE_STATIC_EXECUTABLES
@@ -216,7 +224,7 @@ AC_CONFIG_FILES([dpkg/changelog])
 AC_CONFIG_FILES([libbde/libbde.rc])
 AC_CONFIG_FILES([libbde.pc])
 AC_CONFIG_FILES([libbde.spec])
-AC_CONFIG_FILES([setup.cfg])
+AC_CONFIG_FILES([pyproject.toml])
 dnl Generate a source configuration file
 AC_CONFIG_HEADERS([common/config.h])
 
