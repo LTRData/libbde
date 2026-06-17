@@ -233,6 +233,9 @@
     <ClInclude Include="..\..\libbde\libbde_volume_master_key.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\libbde\libbde_fve_auto_unlock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\libbde\libbde.rc">

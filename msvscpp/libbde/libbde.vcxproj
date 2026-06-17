@@ -502,6 +502,7 @@
     <ClInclude Include="..\..\libbde\libbde_error.h" />
     <ClInclude Include="..\..\libbde\libbde_extern.h" />
     <ClInclude Include="..\..\libbde\libbde_external_key.h" />
+    <ClInclude Include="..\..\libbde\libbde_fve_auto_unlock.h" />
     <ClInclude Include="..\..\libbde\libbde_io_handle.h" />
     <ClInclude Include="..\..\libbde\libbde_key.h" />
     <ClInclude Include="..\..\libbde\libbde_key_protector.h" />

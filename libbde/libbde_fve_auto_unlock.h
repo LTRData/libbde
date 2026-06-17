@@ -25,6 +25,8 @@
 #include <common.h>
 #include <types.h>
 
+#include "libbde_extern.h"
+
 #include "libbde_libcerror.h"
 
 #if defined( __cplusplus )
@@ -43,6 +45,7 @@ extern "C" {
  *
  * Returns 1 if successful, 0 if the external key could not be recovered or -1 on error
  */
+LIBBDE_EXTERN
 int libbde_fve_auto_unlock_read_blob(
      const uint8_t *blob_data,
      size_t blob_data_size,
