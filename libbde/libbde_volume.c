@@ -5162,37 +5162,26 @@ on_error:
 	return( -1 );
 }
 
-/* Sets the external key of a secondary (auto-unlocked) volume by recovering it
- * from a FVEAutoUnlock registry blob using the auto-unlock key of the operating
- * system volume.
- *
- * The auto_unlock_key (typically 32 bytes) is the plaintext key obtained from the
- * operating system volume with libbde_volume_get_auto_unlock_key(). The blob_data
- * is the binary content of the
- * HKLM\SYSTEM\CurrentControlSet\Control\FVEAutoUnlock\{volume-GUID} "Data" value.
+/* Sets the external key of a secondary (auto-unlocked) volume recovered from auto-
+ * unlocking mechanisms in the operating system volume.
  *
  * This function needs to be used before one of the open functions.
  *
- * Returns 1 if successful, 0 if the external key could not be recovered or -1 on error
+ * Returns 1 if successful, or -1 on error
  */
-int libbde_volume_read_auto_unlock_blob(
+int libbde_volume_set_external_key(
      libbde_volume_t *volume,
-     const uint8_t *auto_unlock_key,
-     size_t auto_unlock_key_size,
-     const uint8_t *blob_data,
-     size_t blob_data_size,
-     libcerror_error_t **error )
+	const uint8_t* external_key_data,
+	size_t external_key_data_size,
+	const uint8_t* vmk_identifier,
+	size_t vmk_identifier_size,
+	libcerror_error_t **error )
 {
-	uint8_t external_key_data[ 64 ];
-	uint8_t vmk_identifier[ 16 ];
-
 	libbde_internal_volume_t *internal_volume = NULL;
 	libbde_metadata_t *external_key_metadata  = NULL;
 	libbde_external_key_t *external_key        = NULL;
 	libbde_key_t *key                          = NULL;
-	static char *function                      = "libbde_volume_read_auto_unlock_blob";
-	size_t external_key_data_size              = 0;
-	int result                                 = 0;
+	static char *function                      = "libbde_volume_set_external_key";
 
 	if( volume == NULL )
 	{
@@ -5229,76 +5218,7 @@ int libbde_volume_read_auto_unlock_blob(
 
 		return( -1 );
 	}
-	if( memory_set(
-	     external_key_data,
-	     0,
-	     64 ) == NULL )
-	{
-		libcerror_error_set(
-		 error,
-		 LIBCERROR_ERROR_DOMAIN_MEMORY,
-		 LIBCERROR_MEMORY_ERROR_SET_FAILED,
-		 "%s: unable to clear external key data.",
-		 function );
 
-		goto on_error;
-	}
-	if( memory_set(
-	     vmk_identifier,
-	     0,
-	     16 ) == NULL )
-	{
-		libcerror_error_set(
-		 error,
-		 LIBCERROR_ERROR_DOMAIN_MEMORY,
-		 LIBCERROR_MEMORY_ERROR_SET_FAILED,
-		 "%s: unable to clear VMK identifier.",
-		 function );
-
-		goto on_error;
-	}
-#if defined( HAVE_DEBUG_OUTPUT )
-	if( libcnotify_verbose != 0 )
-	{
-		libcnotify_printf(
-		 "Reading FVEAutoUnlock blob to recover secondary volume external key:\n" );
-	}
-#endif
-	result = libbde_fve_auto_unlock_read_blob(
-	          blob_data,
-	          blob_data_size,
-	          auto_unlock_key,
-	          auto_unlock_key_size,
-	          external_key_data,
-	          64,
-	          &external_key_data_size,
-	          vmk_identifier,
-	          16,
-	          error );
-
-	if( result == -1 )
-	{
-		libcerror_error_set(
-		 error,
-		 LIBCERROR_ERROR_DOMAIN_RUNTIME,
-		 LIBCERROR_RUNTIME_ERROR_GET_FAILED,
-		 "%s: unable to recover external key from FVEAutoUnlock blob.",
-		 function );
-
-		goto on_error;
-	}
-	else if( result == 0 )
-	{
-#if defined( HAVE_DEBUG_OUTPUT )
-		if( libcnotify_verbose != 0 )
-		{
-			libcnotify_printf(
-			 "%s: external key could not be recovered from FVEAutoUnlock blob.\n",
-			 function );
-		}
-#endif
-		goto on_error;
-	}
 	/* Build a synthetic external key metadata structure - the same structure that
 	 * a .BEK startup key file would produce - so that the existing unlock path can
 	 * match the secondary volume's startup-key VMK by identifier and unwrap it.
@@ -5329,10 +5249,11 @@ int libbde_volume_read_auto_unlock_blob(
 
 		goto on_error;
 	}
-	if( memory_copy(
+	if(	vmk_identifier_size != 16 ||
+		memory_copy(
 	     external_key->identifier,
 	     vmk_identifier,
-	     16 ) == NULL )
+		 vmk_identifier_size ) == NULL )
 	{
 		libcerror_error_set(
 		 error,
@@ -5430,18 +5351,9 @@ int libbde_volume_read_auto_unlock_blob(
 		 "%s: unable to release read/write lock for writing.",
 		 function );
 
-		memory_set(
-		 external_key_data,
-		 0,
-		 64 );
-
 		return( -1 );
 	}
 #endif
-	memory_set(
-	 external_key_data,
-	 0,
-	 64 );
 
 	return( 1 );
 
@@ -5464,12 +5376,318 @@ on_error:
 		 &external_key_metadata,
 		 NULL );
 	}
-	memory_set(
-	 external_key_data,
-	 0,
-	 64 );
 
 	return( -1 );
+}
+
+/* Sets the external key of a secondary (auto-unlocked) volume by recovering it
+ * from a FVEAutoUnlock registry blob using the auto-unlock key of the operating
+ * system volume.
+ *
+ * The auto_unlock_key (typically 32 bytes) is the plaintext key obtained from the
+ * operating system volume with libbde_volume_get_auto_unlock_key(). The blob_data
+ * is the binary content of the
+ * HKLM\SYSTEM\CurrentControlSet\Control\FVEAutoUnlock\{volume-GUID} "Data" value.
+ *
+ * This function needs to be used before one of the open functions.
+ *
+ * Returns 1 if successful, 0 if the external key could not be recovered or -1 on error
+ */
+int libbde_volume_read_auto_unlock_blob(
+	libbde_volume_t* volume,
+	const uint8_t* auto_unlock_key,
+	size_t auto_unlock_key_size,
+	const uint8_t* blob_data,
+	size_t blob_data_size,
+	libcerror_error_t** error)
+{
+	uint8_t external_key_data[64];
+	uint8_t vmk_identifier[16];
+
+	libbde_internal_volume_t* internal_volume = NULL;
+	libbde_metadata_t* external_key_metadata = NULL;
+	libbde_external_key_t* external_key = NULL;
+	libbde_key_t* key = NULL;
+	static char* function = "libbde_volume_read_auto_unlock_blob";
+	size_t external_key_data_size = 0;
+	int result = 0;
+
+	if (volume == NULL)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_ARGUMENTS,
+			LIBCERROR_ARGUMENT_ERROR_INVALID_VALUE,
+			"%s: invalid volume.",
+			function);
+
+		return(-1);
+	}
+	internal_volume = (libbde_internal_volume_t*)volume;
+
+	if (internal_volume->file_io_handle != NULL)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_RUNTIME,
+			LIBCERROR_RUNTIME_ERROR_VALUE_ALREADY_SET,
+			"%s: invalid volume - file IO handle already set.",
+			function);
+
+		return(-1);
+	}
+	if (internal_volume->external_key_metadata != NULL)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_RUNTIME,
+			LIBCERROR_RUNTIME_ERROR_VALUE_ALREADY_SET,
+			"%s: invalid volume - external key metadata already set.",
+			function);
+
+		return(-1);
+	}
+	if (memory_set(
+		external_key_data,
+		0,
+		64) == NULL)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_MEMORY,
+			LIBCERROR_MEMORY_ERROR_SET_FAILED,
+			"%s: unable to clear external key data.",
+			function);
+
+		goto on_error;
+	}
+	if (memory_set(
+		vmk_identifier,
+		0,
+		16) == NULL)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_MEMORY,
+			LIBCERROR_MEMORY_ERROR_SET_FAILED,
+			"%s: unable to clear VMK identifier.",
+			function);
+
+		goto on_error;
+	}
+#if defined( HAVE_DEBUG_OUTPUT )
+	if (libcnotify_verbose != 0)
+	{
+		libcnotify_printf(
+			"Reading FVEAutoUnlock blob to recover secondary volume external key:\n");
+	}
+#endif
+	result = libbde_fve_auto_unlock_read_blob(
+		blob_data,
+		blob_data_size,
+		auto_unlock_key,
+		auto_unlock_key_size,
+		external_key_data,
+		64,
+		&external_key_data_size,
+		vmk_identifier,
+		16,
+		error);
+
+	if (result == -1)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_RUNTIME,
+			LIBCERROR_RUNTIME_ERROR_GET_FAILED,
+			"%s: unable to recover external key from FVEAutoUnlock blob.",
+			function);
+
+		goto on_error;
+	}
+	else if (result == 0)
+	{
+#if defined( HAVE_DEBUG_OUTPUT )
+		if (libcnotify_verbose != 0)
+		{
+			libcnotify_printf(
+				"%s: external key could not be recovered from FVEAutoUnlock blob.\n",
+				function);
+		}
+#endif
+		goto on_error;
+	}
+	/* Build a synthetic external key metadata structure - the same structure that
+	 * a .BEK startup key file would produce - so that the existing unlock path can
+	 * match the secondary volume's startup-key VMK by identifier and unwrap it.
+	 */
+	if (libbde_metadata_initialize(
+		&external_key_metadata,
+		error) != 1)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_RUNTIME,
+			LIBCERROR_RUNTIME_ERROR_INITIALIZE_FAILED,
+			"%s: unable to create external key metadata.",
+			function);
+
+		goto on_error;
+	}
+	if (libbde_external_key_initialize(
+		&external_key,
+		error) != 1)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_RUNTIME,
+			LIBCERROR_RUNTIME_ERROR_INITIALIZE_FAILED,
+			"%s: unable to create external key.",
+			function);
+
+		goto on_error;
+	}
+	if (memory_copy(
+		external_key->identifier,
+		vmk_identifier,
+		16) == NULL)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_MEMORY,
+			LIBCERROR_MEMORY_ERROR_COPY_FAILED,
+			"%s: unable to copy VMK identifier to external key.",
+			function);
+
+		goto on_error;
+	}
+	if (libbde_key_initialize(
+		&key,
+		error) != 1)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_RUNTIME,
+			LIBCERROR_RUNTIME_ERROR_INITIALIZE_FAILED,
+			"%s: unable to create key.",
+			function);
+
+		goto on_error;
+	}
+	key->data = (uint8_t*)memory_allocate(
+		sizeof(uint8_t) * external_key_data_size);
+
+	if (key->data == NULL)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_MEMORY,
+			LIBCERROR_MEMORY_ERROR_INSUFFICIENT,
+			"%s: unable to create key data.",
+			function);
+
+		goto on_error;
+	}
+	if (memory_copy(
+		key->data,
+		external_key_data,
+		external_key_data_size) == NULL)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_MEMORY,
+			LIBCERROR_MEMORY_ERROR_COPY_FAILED,
+			"%s: unable to copy external key data to key.",
+			function);
+
+		goto on_error;
+	}
+	key->data_size = external_key_data_size;
+
+	external_key->key = key;
+	key = NULL;
+
+	external_key_metadata->startup_key_external_key = external_key;
+	external_key = NULL;
+
+#if defined( HAVE_LIBBDE_MULTI_THREAD_SUPPORT )
+	if (libcthreads_read_write_lock_grab_for_write(
+		internal_volume->read_write_lock,
+		error) != 1)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_RUNTIME,
+			LIBCERROR_RUNTIME_ERROR_SET_FAILED,
+			"%s: unable to grab read/write lock for writing.",
+			function);
+
+		goto on_error;
+	}
+#endif
+	internal_volume->external_key_metadata = external_key_metadata;
+	external_key_metadata = NULL;
+
+#if defined( HAVE_DEBUG_OUTPUT )
+	if (libcnotify_verbose != 0)
+	{
+		libcnotify_printf(
+			"%s: successfully recovered secondary volume external key from FVEAutoUnlock blob.\n\n",
+			function);
+	}
+#endif
+#if defined( HAVE_LIBBDE_MULTI_THREAD_SUPPORT )
+	if (libcthreads_read_write_lock_release_for_write(
+		internal_volume->read_write_lock,
+		error) != 1)
+	{
+		libcerror_error_set(
+			error,
+			LIBCERROR_ERROR_DOMAIN_RUNTIME,
+			LIBCERROR_RUNTIME_ERROR_SET_FAILED,
+			"%s: unable to release read/write lock for writing.",
+			function);
+
+		memory_set(
+			external_key_data,
+			0,
+			64);
+
+		return(-1);
+	}
+#endif
+	memory_set(
+		external_key_data,
+		0,
+		64);
+
+	return(1);
+
+on_error:
+	if (key != NULL)
+	{
+		libbde_key_free(
+			&key,
+			NULL);
+	}
+	if (external_key != NULL)
+	{
+		libbde_external_key_free(
+			&external_key,
+			NULL);
+	}
+	if (external_key_metadata != NULL)
+	{
+		libbde_metadata_free(
+			&external_key_metadata,
+			NULL);
+	}
+	memory_set(
+		external_key_data,
+		0,
+		64);
+
+	return(-1);
 }
 
 /* Sets the external key of a secondary (auto-unlocked) volume by recovering it

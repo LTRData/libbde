@@ -353,7 +353,7 @@ int libbde_metadata_read_block(
 	metadata->encrypted_volume_size = block_header->encrypted_volume_size;
 	metadata->volume_header_offset  = block_header->volume_header_offset;
 
-	volume_header_size = block_header->number_of_volume_header_sectors * io_handle->bytes_per_sector;
+	volume_header_size = (uint64_t)block_header->number_of_volume_header_sectors * io_handle->bytes_per_sector;
 
 	if( io_handle->version == LIBBDE_VERSION_WINDOWS_VISTA )
 	{
