@@ -2,6 +2,103 @@ libbde is a library to access the BitLocker Drive Encryption (BDE) format.
 BitLocker Drive Encryption (BDE) is a volume-based encryption method used by
 Microsoft Windows, as of Vista, to encrypt data on a storage media volume.
 
+LTRData fork
+============
+
+This repository is LTRData's fork of libyal/libbde:
+https://github.com/libyal/libbde
+
+It incorporates upstream updates and contributor changes, with additional
+BitLocker key-handling APIs and tool support described below. The commit history
+records the origin of individual changes. For issues specific to this fork, use:
+https://github.com/LTRData/libbde/issues
+
+Components:
+
+* libbde: native C library for accessing BDE metadata and decrypted volume data.
+* bdeinfo: command-line volume and key-protector information.
+* bdemount: exposes decrypted volume data through the available FUSE/Dokan
+  backend; interpreting the filesystem inside that volume is a separate step.
+* pybde: Python bindings, enabled through the Python build configuration.
+
+Key-handling additions in this fork
+----------------------------------
+
+* FVEAutoUnlock support for secondary volumes. bdeinfo -A retrieves the
+  operating-system volume's auto-unlock key when it can be recovered using
+  credentials supplied for that volume. Both bdeinfo and bdemount accept -B
+  for a file containing the binary FVEAutoUnlock registry "Data" value and -K
+  for the operating-system volume's auto-unlock key (64 hexadecimal characters).
+
+  The blob corresponds to the secondary volume's entry under:
+  HKLM\SYSTEM\CurrentControlSet\Control\FVEAutoUnlock\{volume-GUID}
+
+  Both the matching blob and the auto-unlock key are needed to recover the
+  secondary volume's external key.
+
+* Recovery of the 48-digit recovery password from an already recovered volume
+  master key (VMK), when suitable recovery-password metadata is present.
+  bdeinfo prints the recovered password when available. The C API exposes
+  libbde_volume_get_utf8_recovered_recovery_password(); recovery is conditional
+  on the available metadata and successful unlock, rather than guaranteed for
+  every volume.
+
+* Native APIs for retrieving the auto-unlock key, consuming a registry blob,
+  extracting its external key and setting an external key with its VMK
+  identifier before opening a volume:
+  - libbde_volume_get_auto_unlock_key()
+  - libbde_volume_read_auto_unlock_blob()
+  - libbde_fve_auto_unlock_read_blob()
+  - libbde_volume_set_external_key()
+
+  Consult include/libbde.h.in for the public header template. At present,
+  libbde_fve_auto_unlock_read_blob() and libbde_volume_set_external_key() are
+  declared with export visibility in libbde/libbde_fve_auto_unlock.h and
+  libbde/libbde_volume.h respectively, but are not declared in that template.
+  Consumers of these newer entry points must account for that header difference.
+
+Use "bdeinfo -h" and "bdemount -h" from this checkout for current options. The
+retained man pages do not yet describe all of these additions. The features
+above require the relevant credentials/key material and metadata; the
+unsupported protector methods listed below still apply.
+
+
+Building this fork
+------------------
+
+The checked-in workflows describe build dependencies and configured test jobs
+for Linux, FreeBSD, macOS and Windows:
+https://github.com/LTRData/libbde/tree/main/.github/workflows
+
+For a Unix source checkout, the common build sequence used by CI is:
+
+    ./synclibs.sh --use-head
+    ./autogen.sh
+    ./configure
+    make
+
+Install the compiler, Autotools and platform dependencies listed in the relevant
+workflow first. synclibs.sh downloads the supporting libyal libraries; --use-head
+selects their current development versions. Use --enable-python with configure
+when building the Python bindings and install the Python development headers.
+The mount tool requires the relevant mount backend at build/runtime.
+
+For tests, obtain the fixtures with ./synctestdata.sh and run:
+
+    tests/runtests.sh CHECK_WITH_STDERR=1
+
+On Windows, the CI sequence uses synclibs.ps1, autogen.ps1 and build.ps1 with
+Visual Studio 2022, an explicit PythonPath and platform, followed by runtests.ps1.
+See build.ps1 and the Windows workflow for the complete options. The presence of
+a workflow is not a guarantee for every compiler, architecture or volume type.
+
+
+General libbde format information
+================================
+
+The following overview retains the upstream project's status, format support
+and limitations. The fork additions above supplement it.
+
 Project information:
 
 * Status: alpha
@@ -26,7 +123,7 @@ Supported protection methods:
 * password
 * recovery password
 * start-up key
-* FKEV and/or TWEAK key data
+* FVEK and/or TWEAK key data
 
 Unsupported BDE formats:
 
